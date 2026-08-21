@@ -6,6 +6,20 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+// configuration cache の入力として追跡させるため providers 経由で読む
+val pexelsApiKey: String = providers
+    .fileContents(layout.settingsDirectory.file("local.properties"))
+    .asText
+    .map { contents ->
+        contents.lineSequence()
+            .map(String::trim)
+            .firstOrNull { it.startsWith("PEXELS_API_KEY=") }
+            ?.substringAfter('=')
+            ?.trim()
+            .orEmpty()
+    }
+    .getOrElse("")
+
 android {
     namespace = "com.gtkim.pexelssearch"
     compileSdk {
@@ -20,6 +34,8 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "PEXELS_API_KEY", "\"$pexelsApiKey\"")
     }
 
     buildTypes {
@@ -35,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -67,6 +84,7 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
