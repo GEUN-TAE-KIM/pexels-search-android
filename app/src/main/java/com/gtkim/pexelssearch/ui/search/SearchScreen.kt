@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -16,9 +17,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
+import com.gtkim.pexelssearch.R
+import com.gtkim.pexelssearch.domain.error.PhotoError
 import com.gtkim.pexelssearch.domain.model.Photo
+import com.gtkim.pexelssearch.ui.common.AppLoadingIndicator
+import com.gtkim.pexelssearch.ui.common.PhotoErrorContent
 import com.gtkim.pexelssearch.ui.search.component.PhotoGrid
 import com.gtkim.pexelssearch.ui.search.component.SearchField
+import com.gtkim.pexelssearch.ui.search.component.SearchMessage
 import com.gtkim.pexelssearch.ui.theme.PexelsSearchTheme
 
 @Composable
@@ -67,11 +73,31 @@ fun SearchScaffold(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
-            PhotoGrid(
-                photos = state.photos,
-                onPhotoClick = { onIntent(SearchIntent.PhotoClicked(it)) },
-                modifier = Modifier.fillMaxSize(),
-            )
+            when {
+                state.isLoading -> AppLoadingIndicator(modifier = Modifier.fillMaxSize())
+
+                state.error != null -> PhotoErrorContent(
+                    error = state.error,
+                    onRetry = { onIntent(SearchIntent.Retry) },
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                state.photos.isNotEmpty() -> PhotoGrid(
+                    photos = state.photos,
+                    onPhotoClick = { onIntent(SearchIntent.PhotoClicked(it)) },
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                state.query.isNotBlank() -> SearchMessage(
+                    message = stringResource(R.string.search_empty_message),
+                    modifier = Modifier.fillMaxSize(),
+                )
+
+                else -> SearchMessage(
+                    message = stringResource(R.string.search_idle_message),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -82,6 +108,39 @@ private fun SearchScaffoldPreview() {
     PexelsSearchTheme {
         SearchScaffold(
             state = SearchUiState(query = "猫", photos = previewPhotos),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SearchScaffoldLoadingPreview() {
+    PexelsSearchTheme {
+        SearchScaffold(
+            state = SearchUiState(query = "猫", isLoading = true),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SearchScaffoldEmptyPreview() {
+    PexelsSearchTheme {
+        SearchScaffold(
+            state = SearchUiState(query = "猫"),
+            onIntent = {},
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SearchScaffoldErrorPreview() {
+    PexelsSearchTheme {
+        SearchScaffold(
+            state = SearchUiState(query = "猫", error = PhotoError.Network),
             onIntent = {},
         )
     }

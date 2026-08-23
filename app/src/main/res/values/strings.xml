@@ -1,4 +1,12 @@
 <resources>
     <string name="app_name">PexelsSearch</string>
     <string name="search_hint">写真を検索</string>
+    <string name="search_idle_message">キーワードを入力して写真を検索してください</string>
+    <string name="search_empty_message">検索結果が見つかりませんでした</string>
+    <string name="retry">再試行</string>
+    <string name="error_network">ネットワークに接続できません。通信環境を確認してください</string>
+    <string name="error_rate_limit">リクエストが集中しています。しばらくしてからお試しください</string>
+    <string name="error_unauthorized">APIキーが設定されていないか、無効です</string>
+    <string name="error_server">サーバーでエラーが発生しました。時間をおいてお試しください</string>
+    <string name="error_unknown">予期しないエラーが発生しました</string>
 </resources>
