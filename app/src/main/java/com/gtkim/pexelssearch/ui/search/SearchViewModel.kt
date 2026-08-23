@@ -1,5 +1,6 @@
 package com.gtkim.pexelssearch.ui.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gtkim.pexelssearch.domain.model.Outcome
@@ -32,20 +33,23 @@ import javax.inject.Inject
 
 private const val SEARCH_DEBOUNCE_MILLIS = 300L
 private const val FIRST_PAGE = 1
+private const val KEY_QUERY = "query"
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val photoRepository: PhotoRepository,
+    private val savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SearchUiState())
+    /** プロセス再生成では query だけ復元する。復元値が初期発行され、debounce を経て自動で再検索される。 */
+    private val queryFlow = savedStateHandle.getStateFlow(KEY_QUERY, "")
+
+    private val _uiState = MutableStateFlow(SearchUiState(query = queryFlow.value))
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
     private val effectChannel = Channel<SearchEffect>(Channel.BUFFERED)
     val effect: Flow<SearchEffect> = effectChannel.receiveAsFlow()
-
-    private val queryFlow = MutableStateFlow("")
 
     /** 検索は [distinctUntilChanged] を通るため、同一クエリを再実行する Retry は別トリガーで流す。 */
     private val retryTrigger = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -76,7 +80,7 @@ class SearchViewModel @Inject constructor(
         when (intent) {
             is SearchIntent.QueryChanged -> {
                 _uiState.update { it.copy(query = intent.query) }
-                queryFlow.value = intent.query
+                savedStateHandle[KEY_QUERY] = intent.query
             }
 
             is SearchIntent.PhotoClicked -> viewModelScope.launch {

@@ -1,5 +1,6 @@
 package com.gtkim.pexelssearch.ui.search
 
+import androidx.lifecycle.SavedStateHandle
 import com.gtkim.pexelssearch.domain.error.PhotoError
 import com.gtkim.pexelssearch.domain.model.Outcome
 import com.gtkim.pexelssearch.domain.model.Photo
@@ -31,7 +32,9 @@ class SearchViewModelTest {
 
     private val photoRepository = mockk<PhotoRepository>()
 
-    private fun makeViewModel() = SearchViewModel(photoRepository)
+    private fun makeViewModel(
+        savedStateHandle: SavedStateHandle = SavedStateHandle(),
+    ) = SearchViewModel(photoRepository, savedStateHandle)
 
     @Test
     fun `入力が止まってから一度だけ検索される`() = runTest {
@@ -136,6 +139,22 @@ class SearchViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) { photoRepository.searchPhotos(any(), any()) }
+    }
+
+    @Test
+    fun `SavedStateHandle のクエリが復元される`() = runTest {
+        coEvery { photoRepository.searchPhotos(any(), any()) } returns successPage(photo(1L))
+        val savedStateHandle = SavedStateHandle()
+
+        makeViewModel(savedStateHandle).onIntent(SearchIntent.QueryChanged(QUERY))
+        advanceUntilIdle()
+
+        // プロセス再生成 — 同じ SavedStateHandle から作り直す
+        val restored = makeViewModel(savedStateHandle)
+        assertEquals(QUERY, restored.uiState.value.query)
+
+        advanceUntilIdle()
+        assertEquals(listOf(1L), restored.uiState.value.photos.map(Photo::id))
     }
 }
 
