@@ -76,7 +76,8 @@ fun SearchScaffold(
             when {
                 state.isLoading -> AppLoadingIndicator(modifier = Modifier.fillMaxSize())
 
-                state.error != null -> PhotoErrorContent(
+                // 結果が残っている場合の失敗は追加読み込みの失敗なので、グリッド側のフッターに任せる
+                state.error != null && state.photos.isEmpty() -> PhotoErrorContent(
                     error = state.error,
                     onRetry = { onIntent(SearchIntent.Retry) },
                     modifier = Modifier.fillMaxSize(),
@@ -84,7 +85,11 @@ fun SearchScaffold(
 
                 state.photos.isNotEmpty() -> PhotoGrid(
                     photos = state.photos,
+                    endReached = state.endReached,
+                    isLoadingMore = state.isLoadingMore,
+                    loadMoreError = state.error,
                     onPhotoClick = { onIntent(SearchIntent.PhotoClicked(it)) },
+                    onLoadMore = { onIntent(SearchIntent.LoadMore) },
                     modifier = Modifier.fillMaxSize(),
                 )
 

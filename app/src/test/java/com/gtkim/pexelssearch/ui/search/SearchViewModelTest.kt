@@ -21,6 +21,7 @@ private const val OTHER_QUERY = "犬"
 private const val BLANK_QUERY = "   "
 private const val DEBOUNCE_MILLIS = 300L
 private const val FIRST_PAGE = 1
+private const val SECOND_PAGE = 2
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
@@ -87,16 +88,54 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `検索に失敗するとエラーが State に反映される`() = runTest {
-        coEvery { photoRepository.searchPhotos(any(), any()) } returns
+    fun `初回検索の失敗では結果を空にする`() = runTest {
+        coEvery { photoRepository.searchPhotos(QUERY, FIRST_PAGE) } returns successPage(photo(1L))
+        coEvery { photoRepository.searchPhotos(OTHER_QUERY, FIRST_PAGE) } returns
             Outcome.Failure(PhotoError.Network)
         val viewModel = makeViewModel()
 
         viewModel.onIntent(SearchIntent.QueryChanged(QUERY))
         advanceUntilIdle()
+        assertEquals(listOf(1L), viewModel.uiState.value.photos.map(Photo::id))
 
+        // 前のクエリの結果を残すと、追加読み込みの失敗と State だけでは区別できなくなる
+        viewModel.onIntent(SearchIntent.QueryChanged(OTHER_QUERY))
+        advanceUntilIdle()
+
+        assertEquals(emptyList<Photo>(), viewModel.uiState.value.photos)
         assertEquals(PhotoError.Network, viewModel.uiState.value.error)
-        assertEquals(false, viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `追加読み込みは結果を蓄積し重複を除く`() = runTest {
+        coEvery { photoRepository.searchPhotos(QUERY, FIRST_PAGE) } returns
+            successPage(photo(1L), photo(2L), page = FIRST_PAGE)
+        coEvery { photoRepository.searchPhotos(QUERY, SECOND_PAGE) } returns
+            successPage(photo(2L), photo(3L), page = SECOND_PAGE)
+        val viewModel = makeViewModel()
+
+        viewModel.onIntent(SearchIntent.QueryChanged(QUERY))
+        advanceUntilIdle()
+        viewModel.onIntent(SearchIntent.LoadMore)
+        advanceUntilIdle()
+
+        // Pexelsはページを跨いで同じ写真を返すため、id 2 が二重に並ばない
+        assertEquals(listOf(1L, 2L, 3L), viewModel.uiState.value.photos.map(Photo::id))
+        assertEquals(SECOND_PAGE, viewModel.uiState.value.page)
+    }
+
+    @Test
+    fun `endReached 以降は追加読み込みしない`() = runTest {
+        coEvery { photoRepository.searchPhotos(QUERY, FIRST_PAGE) } returns
+            successPage(photo(1L), endReached = true)
+        val viewModel = makeViewModel()
+
+        viewModel.onIntent(SearchIntent.QueryChanged(QUERY))
+        advanceUntilIdle()
+        viewModel.onIntent(SearchIntent.LoadMore)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { photoRepository.searchPhotos(any(), any()) }
     }
 }
 

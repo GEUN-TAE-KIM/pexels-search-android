@@ -6,7 +6,10 @@ import com.gtkim.pexelssearch.domain.model.Photo
 data class SearchUiState(
     val query: String = "",
     val photos: List<Photo> = emptyList(),
+    val page: Int = 1,
+    val endReached: Boolean = false,
     val isLoading: Boolean = false,
+    val isLoadingMore: Boolean = false,
     val error: PhotoError? = null,
 )
 
