@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">PexelsSearch</string>
+    <string name="search_hint">写真を検索</string>
 </resources>
