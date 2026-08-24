@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.gtkim.pexelssearch.ui.search.SearchScreen
+import com.gtkim.pexelssearch.ui.navigation.PexelsSearchNavHost
 import com.gtkim.pexelssearch.ui.theme.PexelsSearchTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -15,7 +15,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             PexelsSearchTheme {
-                SearchScreen(onNavigateToDetail = {})
+                PexelsSearchNavHost()
             }
         }
     }
