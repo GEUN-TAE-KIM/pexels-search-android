@@ -1,4 +1,4 @@
-package com.gtkim.pexelssearch.ui.search
+package com.gtkim.pexelssearch.ui
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -10,8 +10,8 @@ import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 
 /**
- * [SearchViewModel] は init で viewModelScope の検索フローを購読するため、Main を [TestDispatcher] に
- * 差し替えて runTest の仮想時間で debounce を進められるようにする。
+ * 各 ViewModel が init で viewModelScope の処理を始めるため、Main を [TestDispatcher] に差し替えて
+ * runTest の仮想時間で debounce やロードを進められるようにする。
  *
  * 既定を [UnconfinedTestDispatcher] にしているのは、購読が生成と同時に始まらないと Retry の emit が
  * 購読者なしで捨てられるため。

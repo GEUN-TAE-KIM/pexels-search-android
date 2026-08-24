@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.gtkim.pexelssearch.ui.detail.PhotoDetailScreen
 import com.gtkim.pexelssearch.ui.search.SearchScreen
 import kotlinx.serialization.Serializable
 
@@ -35,6 +36,8 @@ fun PexelsSearchNavHost(modifier: Modifier = Modifier) {
             )
         }
 
-        composable<PhotoDetailRoute> { }
+        composable<PhotoDetailRoute> {
+            PhotoDetailScreen(onBack = { navController.popBackStack() })
+        }
     }
 }

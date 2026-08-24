@@ -6,6 +6,7 @@ import com.gtkim.pexelssearch.domain.model.Outcome
 import com.gtkim.pexelssearch.domain.model.Photo
 import com.gtkim.pexelssearch.domain.model.PhotoPage
 import com.gtkim.pexelssearch.domain.repository.PhotoRepository
+import com.gtkim.pexelssearch.ui.MainDispatcherRule
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
