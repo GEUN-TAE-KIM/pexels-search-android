@@ -4,7 +4,7 @@ sealed interface PhotoError {
     data object Network : PhotoError
     data object RateLimit : PhotoError
     data object Server : PhotoError
-    /** Pexelsは両エンドポイントでキーを強制しないため実際には到達しない。防御的に残す。 */
+    /** キーを送らないリクエストが断続的に 401 を返すため、キー未設定のクローンでは到達し得る。 */
     data object Unauthorized : PhotoError
 
     /** 未分類の400やJSONパース失敗がここに集まるため、原因を捨てずに保持する。 */

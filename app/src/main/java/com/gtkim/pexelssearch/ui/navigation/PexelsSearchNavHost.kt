@@ -31,7 +31,8 @@ fun PexelsSearchNavHost(modifier: Modifier = Modifier) {
         composable<SearchRoute> {
             SearchScreen(
                 onNavigateToDetail = { photoId ->
-                    navController.navigate(PhotoDetailRoute(photoId))
+                    // 素早く2回タップしても詳細が2枚積まれないようにする
+                    navController.navigate(PhotoDetailRoute(photoId)) { launchSingleTop = true }
                 },
             )
         }
