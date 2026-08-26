@@ -1,6 +1,5 @@
 package com.gtkim.pexelssearch.ui.detail
 
-import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -21,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -33,6 +31,7 @@ import com.gtkim.pexelssearch.domain.model.Photo
 import com.gtkim.pexelssearch.ui.common.AppLoadingIndicator
 import com.gtkim.pexelssearch.ui.common.PhotoErrorContent
 import com.gtkim.pexelssearch.ui.detail.component.PhotoDetailContent
+import com.gtkim.pexelssearch.ui.openUrl
 import com.gtkim.pexelssearch.ui.theme.PexelsSearchTheme
 import kotlinx.coroutines.launch
 
@@ -46,19 +45,15 @@ fun PhotoDetailScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val openFailedMessage = stringResource(R.string.detail_open_url_failed)
+    val openFailedMessage = stringResource(R.string.open_url_failed)
 
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effect.collect { effect ->
                 when (effect) {
-                    // ブラウザの有無はUIしか知り得ないため、失敗の判定と通知をこの場で完結させる
-                    is PhotoDetailEffect.OpenUrl -> {
-                        val opened = runCatching {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, effect.url.toUri()))
-                        }.isSuccess
-                        // showSnackbar は表示が消えるまで suspend するため、次の Effect の収集を止めないよう切り離す
-                        if (!opened) launch { snackbarHostState.showSnackbar(openFailedMessage) }
+                    // showSnackbar は表示が消えるまで suspend するため、次の Effect の収集を止めないよう切り離す
+                    is PhotoDetailEffect.OpenUrl -> if (!context.openUrl(effect.url)) {
+                        launch { snackbarHostState.showSnackbar(openFailedMessage) }
                     }
                 }
             }

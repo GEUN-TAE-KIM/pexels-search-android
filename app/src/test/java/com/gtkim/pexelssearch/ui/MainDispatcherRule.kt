@@ -11,7 +11,7 @@ import org.junit.runner.Description
 
 /**
  * 各 ViewModel が init で viewModelScope の処理を始めるため、Main を [TestDispatcher] に差し替えて
- * runTest の仮想時間で debounce やロードを進められるようにする。
+ * runTest の仮想時間でロードや最低表示時間を進められるようにする。
  *
  * 既定を [UnconfinedTestDispatcher] にしているのは、購読が生成と同時に始まらないと Retry の emit が
  * 購読者なしで捨てられるため。

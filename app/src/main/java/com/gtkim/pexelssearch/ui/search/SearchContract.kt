@@ -10,16 +10,20 @@ data class SearchUiState(
     val endReached: Boolean = false,
     val isLoading: Boolean = false,
     val isLoadingMore: Boolean = false,
+    val hasSearched: Boolean = false,
     val error: PhotoError? = null,
 )
 
 sealed interface SearchIntent {
     data class QueryChanged(val query: String) : SearchIntent
+    data object SearchSubmitted : SearchIntent
     data class PhotoClicked(val photoId: Long) : SearchIntent
     data object LoadMore : SearchIntent
     data object Retry : SearchIntent
+    data object PexelsLinkClicked : SearchIntent
 }
 
 sealed interface SearchEffect {
     data class NavigateToDetail(val photoId: Long) : SearchEffect
+    data class OpenUrl(val url: String) : SearchEffect
 }

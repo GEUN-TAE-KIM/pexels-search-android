@@ -2,6 +2,8 @@ package com.gtkim.pexelssearch.ui.search
 
 import android.content.Context
 import androidx.annotation.StringRes
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
@@ -39,7 +41,7 @@ class SearchScaffoldTest {
 
     @Test
     fun `検索結果が空のとき空状態メッセージが表示される`() {
-        setScaffold(SearchUiState(query = "猫"))
+        setScaffold(SearchUiState(query = "猫", hasSearched = true))
 
         composeRule
             .onNodeWithText(getString(R.string.search_empty_message))
@@ -48,7 +50,7 @@ class SearchScaffoldTest {
 
     @Test
     fun `エラー発生時はエラーメッセージと再試行ボタンが表示される`() {
-        setScaffold(SearchUiState(query = "猫", error = PhotoError.Network))
+        setScaffold(SearchUiState(query = "猫", hasSearched = true, error = PhotoError.Network))
 
         composeRule.onNodeWithText(getString(R.string.error_network)).assertIsDisplayed()
         composeRule.onNodeWithText(getString(R.string.retry)).assertIsDisplayed()
@@ -57,7 +59,11 @@ class SearchScaffoldTest {
     private fun setScaffold(state: SearchUiState) {
         composeRule.setContent {
             PexelsSearchTheme {
-                SearchScaffold(state = state, onIntent = {})
+                SearchScaffold(
+                    state = state,
+                    onIntent = {},
+                    snackbarHostState = remember { SnackbarHostState() },
+                )
             }
         }
     }

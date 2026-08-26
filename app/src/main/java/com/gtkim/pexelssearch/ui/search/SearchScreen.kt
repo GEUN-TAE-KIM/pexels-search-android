@@ -5,10 +5,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -22,10 +27,13 @@ import com.gtkim.pexelssearch.domain.error.PhotoError
 import com.gtkim.pexelssearch.domain.model.Photo
 import com.gtkim.pexelssearch.ui.common.AppLoadingIndicator
 import com.gtkim.pexelssearch.ui.common.PhotoErrorContent
+import com.gtkim.pexelssearch.ui.openUrl
+import com.gtkim.pexelssearch.ui.search.component.PexelsAttribution
 import com.gtkim.pexelssearch.ui.search.component.PhotoGrid
 import com.gtkim.pexelssearch.ui.search.component.SearchField
 import com.gtkim.pexelssearch.ui.search.component.SearchMessage
 import com.gtkim.pexelssearch.ui.theme.PexelsSearchTheme
+import kotlinx.coroutines.launch
 
 @Composable
 fun SearchScreen(
@@ -35,13 +43,22 @@ fun SearchScreen(
     val viewModel: SearchViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val openFailedMessage = stringResource(R.string.open_url_failed)
+    val currentOnNavigateToDetail by rememberUpdatedState(onNavigateToDetail)
 
     // 停止中に流すと遷移先が受け取れないため、STARTED の間だけ購読する。その間の Effect は Channel が保持する
     LaunchedEffect(viewModel, lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             viewModel.effect.collect { effect ->
                 when (effect) {
-                    is SearchEffect.NavigateToDetail -> onNavigateToDetail(effect.photoId)
+                    is SearchEffect.NavigateToDetail -> currentOnNavigateToDetail(effect.photoId)
+
+                    // showSnackbar は表示が消えるまで suspend するため、次の Effect の収集を止めないよう切り離す
+                    is SearchEffect.OpenUrl -> if (!context.openUrl(effect.url)) {
+                        launch { snackbarHostState.showSnackbar(openFailedMessage) }
+                    }
                 }
             }
         }
@@ -50,6 +67,7 @@ fun SearchScreen(
     SearchScaffold(
         state = state,
         onIntent = viewModel::onIntent,
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
     )
 }
@@ -58,9 +76,13 @@ fun SearchScreen(
 fun SearchScaffold(
     state: SearchUiState,
     onIntent: (SearchIntent) -> Unit,
+    snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
-    Scaffold(modifier = modifier.fillMaxSize()) { innerPadding ->
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -69,9 +91,14 @@ fun SearchScaffold(
             SearchField(
                 query = state.query,
                 onQueryChange = { onIntent(SearchIntent.QueryChanged(it)) },
+                onSearch = { onIntent(SearchIntent.SearchSubmitted) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            PexelsAttribution(
+                onClick = { onIntent(SearchIntent.PexelsLinkClicked) },
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
             )
             when {
                 state.isLoading -> AppLoadingIndicator(modifier = Modifier.fillMaxSize())
@@ -93,7 +120,8 @@ fun SearchScaffold(
                     modifier = Modifier.fillMaxSize(),
                 )
 
-                state.query.isNotBlank() -> SearchMessage(
+                // 入力しただけの段階では「結果なし」ではなく案内を出す
+                state.hasSearched -> SearchMessage(
                     message = stringResource(R.string.search_empty_message),
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -112,8 +140,9 @@ fun SearchScaffold(
 private fun SearchScaffoldPreview() {
     PexelsSearchTheme {
         SearchScaffold(
-            state = SearchUiState(query = "猫", photos = previewPhotos),
+            state = SearchUiState(query = "猫", photos = previewPhotos, hasSearched = true),
             onIntent = {},
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -125,6 +154,7 @@ private fun SearchScaffoldLoadingPreview() {
         SearchScaffold(
             state = SearchUiState(query = "猫", isLoading = true),
             onIntent = {},
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -134,8 +164,9 @@ private fun SearchScaffoldLoadingPreview() {
 private fun SearchScaffoldEmptyPreview() {
     PexelsSearchTheme {
         SearchScaffold(
-            state = SearchUiState(query = "猫"),
+            state = SearchUiState(query = "猫", hasSearched = true),
             onIntent = {},
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }
@@ -145,8 +176,9 @@ private fun SearchScaffoldEmptyPreview() {
 private fun SearchScaffoldErrorPreview() {
     PexelsSearchTheme {
         SearchScaffold(
-            state = SearchUiState(query = "猫", error = PhotoError.Network),
+            state = SearchUiState(query = "猫", hasSearched = true, error = PhotoError.Network),
             onIntent = {},
+            snackbarHostState = remember { SnackbarHostState() },
         )
     }
 }

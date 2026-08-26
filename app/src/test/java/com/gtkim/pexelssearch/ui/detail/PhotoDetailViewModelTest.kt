@@ -12,6 +12,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -21,6 +22,7 @@ import org.junit.Test
 private const val PHOTO_ID = 42L
 private const val KEY_PHOTO_ID = "photoId"
 private const val LOAD_DELAY_MILLIS = 100L
+private const val MIN_LOADING_MILLIS = 400L
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PhotoDetailViewModelTest {
@@ -73,6 +75,21 @@ class PhotoDetailViewModelTest {
     }
 
     @Test
+    fun `取得済みでも再試行に失敗すれば写真を空にする`() = runTest {
+        coEvery { photoRepository.getPhoto(PHOTO_ID) } returns Outcome.Success(photo())
+        val viewModel = makeViewModel()
+        advanceUntilIdle()
+
+        coEvery { photoRepository.getPhoto(PHOTO_ID) } returns Outcome.Failure(PhotoError.Network)
+        viewModel.onIntent(PhotoDetailIntent.Retry)
+        advanceUntilIdle()
+
+        // 写真とエラーが同時に残ると、どちらを描くかが State だけでは決まらなくなる
+        assertEquals(null, viewModel.uiState.value.photo)
+        assertEquals(PhotoError.Network, viewModel.uiState.value.error)
+    }
+
+    @Test
     fun `取得中は isLoading が true になる`() = runTest {
         coEvery { photoRepository.getPhoto(PHOTO_ID) } coAnswers {
             delay(LOAD_DELAY_MILLIS)
@@ -80,6 +97,22 @@ class PhotoDetailViewModelTest {
         }
         val viewModel = makeViewModel()
 
+        assertEquals(true, viewModel.uiState.value.isLoading)
+
+        advanceUntilIdle()
+
+        assertEquals(false, viewModel.uiState.value.isLoading)
+    }
+
+    @Test
+    fun `再試行は即座に失敗してもローディングが最低表示時間だけ残る`() = runTest {
+        coEvery { photoRepository.getPhoto(PHOTO_ID) } returns Outcome.Failure(PhotoError.Network)
+        val viewModel = makeViewModel()
+        advanceUntilIdle()
+
+        // 失敗が数msで返ると、押した直後にローディングが1フレームも描かれず反応がないように見える
+        viewModel.onIntent(PhotoDetailIntent.Retry)
+        advanceTimeBy(MIN_LOADING_MILLIS)
         assertEquals(true, viewModel.uiState.value.isLoading)
 
         advanceUntilIdle()
